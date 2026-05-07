@@ -4,7 +4,6 @@ import in.rinmukt.domain.Report;
 import in.rinmukt.dto.MriRequest;
 import in.rinmukt.service.CalculationEngine;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = {"http://localhost:3000", "https://rinmukt.in", "https://*.vercel.app"})
 public class MriController {
 
     private final CalculationEngine engine;

@@ -1,0 +1,17 @@
+# Render Blueprint — one-click deploy of the Rinmukt backend.
+# After signup at render.com → "New Blueprint" → point at this repo.
+
+services:
+  - type: web
+    name: rinmukt-backend
+    runtime: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: dev
+      - key: PORT
+        value: 8080
+      - key: CORS_ALLOWED_ORIGINS
+        value: "http://localhost:3000,https://*.vercel.app"
