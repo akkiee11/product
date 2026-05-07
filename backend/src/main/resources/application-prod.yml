@@ -13,11 +13,12 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-  # Gmail SMTP. App Password is set as SMTP_PASSWORD on Render.
+  # SMTP transport — configurable for Brevo / Mailgun / Gmail. Defaults
+  # to Brevo's relay (works without 2FA + supports single-sender mode).
   # Email features no-op silently if SMTP_USERNAME is blank.
   mail:
-    host: smtp.gmail.com
-    port: 587
+    host: ${SMTP_HOST:smtp-relay.brevo.com}
+    port: ${SMTP_PORT:587}
     username: ${SMTP_USERNAME:}
     password: ${SMTP_PASSWORD:}
     properties:
