@@ -10,6 +10,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "html2canvas-pro": "^2.0.2",
+    "jspdf": "^4.2.1",
     "next": "^15.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
