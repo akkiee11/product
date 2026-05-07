@@ -13,3 +13,24 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+  # Gmail SMTP. App Password is set as SMTP_PASSWORD on Render.
+  # Email features no-op silently if SMTP_USERNAME is blank.
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+rinmukt:
+  email:
+    from: ${EMAIL_FROM:${SMTP_USERNAME:}}
+    public-base-url: ${PUBLIC_BASE_URL:https://rinmukt.vercel.app}
+  admin:
+    token: ${ADMIN_TOKEN:}

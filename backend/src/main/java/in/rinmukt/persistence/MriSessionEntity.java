@@ -42,6 +42,15 @@ public class MriSessionEntity {
     @Column(name = "recommended_path", length = 50)
     private String recommendedPath;
 
+    @Column(name = "email", length = 255)
+    private String email;
+
+    @Column(name = "welcome_sent_at")
+    private OffsetDateTime welcomeSentAt;
+
+    @Column(name = "day7_sent_at")
+    private OffsetDateTime day7SentAt;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }

@@ -83,3 +83,43 @@ export async function fetchReport(id: string): Promise<Report> {
   }
   return res.json();
 }
+
+export interface AdminStats {
+  total: number;
+  today: number;
+  last7Days: number;
+  withEmail: number;
+  welcomeSent: number;
+  day7Sent: number;
+  byPath: Record<string, number>;
+  byHealthLabel: Record<string, number>;
+}
+
+export interface AdminSession {
+  id: string;
+  email: string | null;
+  createdAt: string | null;
+  healthScore: number | null;
+  healthLabel?: string | null;
+  totalDebt?: number;
+  recommendedPath: string | null;
+  welcomeSent: boolean;
+  day7Sent: boolean;
+}
+
+async function adminFetch<T>(path: string, token: string): Promise<T> {
+  const res = await fetch(`${BASE}/api/admin/${path}`, {
+    headers: { "X-Admin-Token": token },
+  });
+  if (res.status === 401) throw new Error("Invalid admin token");
+  if (res.status === 503) throw new Error("Admin endpoints not enabled on the server (ADMIN_TOKEN unset).");
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Admin API ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+export const fetchAdminStats = (token: string) => adminFetch<AdminStats>("stats", token);
+export const fetchAdminSessions = (token: string) =>
+  adminFetch<{ sessions: AdminSession[] }>("sessions", token).then((r) => r.sessions);
