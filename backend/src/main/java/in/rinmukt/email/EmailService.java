@@ -3,49 +3,55 @@ package in.rinmukt.email;
 import in.rinmukt.domain.Report;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * Sends transactional emails via Gmail SMTP.
+ * Sends transactional emails via Brevo's HTTP API (port 443 — never blocked
+ * by Render free tier the way 587/2525 SMTP outbound is).
  *
- * If SMTP isn't configured (no JavaMailSender bean, or no FROM address)
- * every send() is a silent no-op so dev mode + un-configured prod still
- * function. The MriController never blocks on email delivery — see the
- * @Async dispatch.
+ * No-ops silently when BREVO_API_KEY or EMAIL_FROM are unset, so dev
+ * mode (and un-configured prod) still function. The MriController
+ * never blocks on email — see EmailDispatcher's @Async dispatch.
  */
 @Service
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+    private static final String BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
-    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final RestClient http;
+    private final String apiKey;
     private final String fromAddress;
     private final String publicBaseUrl;
 
     public EmailService(
-            ObjectProvider<JavaMailSender> mailSenderProvider,
+            @Value("${rinmukt.email.brevo-api-key:}") String apiKey,
             @Value("${rinmukt.email.from:}") String fromAddress,
             @Value("${rinmukt.email.public-base-url:https://rinmukt.vercel.app}") String publicBaseUrl
     ) {
-        this.mailSenderProvider = mailSenderProvider;
+        this.apiKey = apiKey;
         this.fromAddress = fromAddress;
         this.publicBaseUrl = publicBaseUrl;
+        this.http = RestClient.builder()
+                .baseUrl(BREVO_ENDPOINT)
+                .defaultHeader("accept", MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader("content-type", MediaType.APPLICATION_JSON_VALUE)
+                .build();
     }
 
-    /** True when both an SMTP sender and a FROM address are configured. */
     public boolean isEnabled() {
-        return mailSenderProvider.getIfAvailable() != null && !fromAddress.isBlank();
+        return !apiKey.isBlank() && !fromAddress.isBlank();
     }
 
     public boolean sendWelcome(String to, UUID reportId, Report report) {
         if (!isEnabled() || to == null || to.isBlank()) return false;
-
         String reportUrl = publicBaseUrl + "/r/" + reportId;
         String body = """
                 Hi,
@@ -74,13 +80,11 @@ public class EmailService {
                 report.getTotalDebt(),
                 humanPath(report.getRecommendedPathId())
         );
-
         return send(to, "Your Debt MRI report is ready", body);
     }
 
     public boolean sendDay7FollowUp(String to, UUID reportId, Report report) {
         if (!isEnabled() || to == null || to.isBlank()) return false;
-
         String reportUrl = publicBaseUrl + "/r/" + reportId;
         String body = """
                 Hi,
@@ -103,21 +107,23 @@ public class EmailService {
 
                 — Rinmukt
                 """.formatted(reportUrl);
-
         return send(to, "Day 7: how did the bank call go?", body);
     }
 
     private boolean send(String to, String subject, String body) {
-        JavaMailSender sender = mailSenderProvider.getIfAvailable();
-        if (sender == null) return false;
         try {
-            SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setFrom(fromAddress);
-            msg.setTo(to);
-            msg.setSubject(subject);
-            msg.setText(body);
-            sender.send(msg);
-            log.info("Email sent to {}: {}", to, subject);
+            Map<String, Object> payload = Map.of(
+                    "sender", Map.of("name", "Rinmukt", "email", fromAddress),
+                    "to", List.of(Map.of("email", to)),
+                    "subject", subject,
+                    "textContent", body
+            );
+            String response = http.post()
+                    .header("api-key", apiKey)
+                    .body(payload)
+                    .retrieve()
+                    .body(String.class);
+            log.info("Email sent via Brevo to {}: subject={} response={}", to, subject, response);
             return true;
         } catch (Exception e) {
             log.warn("Email send failed to {}: {}", to, e.getMessage());
