@@ -82,8 +82,14 @@ export default function StartPage() {
     setError(null);
     try {
       const report = await generateMri(form);
-      sessionStorage.setItem("rinmukt:report", JSON.stringify(report));
-      router.push("/report");
+      if (report.id) {
+        // Persisted — use the shareable URL.
+        router.push(`/r/${report.id}`);
+      } else {
+        // Dev / no DB — fall back to sessionStorage.
+        sessionStorage.setItem("rinmukt:report", JSON.stringify(report));
+        router.push("/report");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setSubmitting(false);

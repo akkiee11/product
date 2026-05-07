@@ -50,6 +50,7 @@ export interface PathResult {
 }
 
 export interface Report {
+  id?: string;                    // present once persisted in prod; absent in dev
   healthScore: number;
   healthLabel: string;
   primaryConcern: string;
@@ -66,6 +67,16 @@ export async function generateMri(req: MriRequest): Promise<Report> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API error ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+export async function fetchReport(id: string): Promise<Report> {
+  const res = await fetch(`${BASE}/api/mri/${id}`);
+  if (res.status === 404) throw new Error("This report doesn't exist or has expired.");
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`API error ${res.status}: ${text}`);
