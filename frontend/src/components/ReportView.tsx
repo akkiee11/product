@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Report } from "@/lib/api";
 import { lakh, months } from "@/lib/format";
+import { PATH_DETAILS } from "@/lib/pathDetails";
+import PathDetailPanel from "./PathDetailPanel";
 
 export default function ReportView({ report }: { report: Report }) {
   const [downloading, setDownloading] = useState(false);
@@ -16,6 +18,35 @@ export default function ReportView({ report }: { report: Report }) {
       : report.healthScore >= 50
         ? "text-yellow-600"
         : "text-red-600";
+
+  // Per-report progress, persisted in localStorage. Falls back to "session"
+  // (sessionStorage report) when there's no persisted id.
+  const progressKey = `rinmukt:progress:${report.id ?? "session"}`;
+  const [progress, setProgress] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(progressKey);
+    if (raw) {
+      try {
+        setProgress(JSON.parse(raw));
+      } catch {
+        /* ignore corrupt state */
+      }
+    }
+  }, [progressKey]);
+
+  const toggleStep = (stepKey: string) => {
+    setProgress((prev) => {
+      const next = { ...prev, [stepKey]: !prev[stepKey] };
+      try {
+        window.localStorage.setItem(progressKey, JSON.stringify(next));
+      } catch {
+        /* storage full / disabled — silently ignore */
+      }
+      return next;
+    });
+  };
 
   const handleDownloadPdf = async () => {
     if (!reportRef.current || downloading) return;
@@ -149,7 +180,31 @@ export default function ReportView({ report }: { report: Report }) {
           </div>
         </section>
 
-        <p className="mt-8 text-xs text-gray-500">
+        <section className="mt-12">
+          <h2 className="text-2xl font-bold">How each path actually works</h2>
+          <p className="mt-2 text-gray-600">
+            Step-by-step plans, phone scripts for the bank, and what to say when they push back.
+            Tick steps as you finish them — your progress saves on this device.
+          </p>
+          <div className="mt-5 space-y-4">
+            {report.paths.map((p) => {
+              const detail = PATH_DETAILS[p.pathId];
+              if (!detail) return null;
+              return (
+                <PathDetailPanel
+                  key={p.pathId}
+                  path={p}
+                  detail={detail}
+                  defaultOpen={p.recommended}
+                  done={progress}
+                  toggleStep={toggleStep}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        <p className="mt-10 text-xs text-gray-500">
           Information &amp; advisory tool. Not a registered debt counsellor or lender. Verify all
           recommendations with a CA or qualified advisor before acting.
         </p>
