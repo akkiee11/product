@@ -1,0 +1,8 @@
+# Local dev — runs the engine without any external dependencies.
+# JPA / Flyway disabled so Spring Boot starts on `mvn spring-boot:run`.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
